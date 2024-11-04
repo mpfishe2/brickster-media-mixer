@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Media Inventory Mix Optimizer</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Media Inventory Mix Optimizer</h1>
+    <form id="simulation-form">
+        <label for="budget">Budget: <span id="budget-value"></span></label>
+        <input type="range" id="budget" name="budget" min="1000" max="100000" step="1000" value="50000">
+        <br><br>
+
+        <label for="frequency_cap">Frequency Cap: <span id="frequency-cap-value"></span></label>
+        <input type="range" id="frequency_cap" name="frequency_cap" min="1" max="20" step="1" value="5">
+        <br><br>
+
+        <label for="kpi_target">KPI Target:</label>
+        <select id="kpi_target" name="kpi_target" style="width: 100%; padding: 5px; border-radius: 5px;">
+            <option value="CPM">CPM</option>
+            <option value="CTR">CTR</option>
+            <option value="CPC">CPC</option>
+        </select>
+        <br><br>
+
+        <button type="submit">Run Simulation</button>
+
+    <h2>Simulation Results:</h2>
+    <div id="kpiGauge"></div> 
+
+    <script>
+        $(document).ready(function() {
+            // Initialize slider values
+            $('#budget-value').text($('#budget').val());
+            $('#frequency-cap-value').text($('#frequency_cap').val());
+
+            $('#budget').on('input', function() {
+                $('#budget-value').text($(this).val());
+            });
+
+            $('#frequency_cap').on('input', function() {
+                $('#frequency-cap-value').text($(this).val());
+            });
+
+            // Handle form submission
+            $('#simulation-form').on('submit', function(event) {
+                event.preventDefault();
+
+                $.ajax({
+                    url: '/simulate',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        // Call function to update the gauge chart with the simulation results
+                        updateKPIGauge(response);
+                    },
+                    error: function() {
+                        alert('An error occurred while running the simulation.');
+                    }
+                });
+            });
+
+            // Function to update the KPI gauge chart
+            function updateKPIGauge(data) {
+                var gaugeData = [
+                    {
+                        type: "indicator",
+                        mode: "gauge+number",
+                        value: data.value, // The KPI value from the simulation
+                        title: { text: data.kpi + " Value", font: { size: 24 } },
+                        gauge: {
+                            axis: { range: [0, 1500] }, // Adjust the range as needed
+                            bar: { color: "blue" }, // Color of the indicator
+                            steps: [
+                                { range: [0, 1000], color: "lightgray" },
+                                { range: [1000, 1500], color: "lightblue" }
+                            ],
+                            threshold: {
+                                line: { color: "green", width: 4 },
+                                thickness: 0.75,
+                                value: 1500 // goal
+                            }
+                        }
+                    }
+                ];
+
+                var layout = {
+                    autosize: true,
+                    width: null,
+                    height: 300,
+                    margin: { t: 20, r: 30, l: 30, b: 20 }
+                };
+
+                Plotly.newPlot('kpiGauge', gaugeData, layout, { responsive: true });
+            }
+        });
+    </script>
+</body>
+</html>
